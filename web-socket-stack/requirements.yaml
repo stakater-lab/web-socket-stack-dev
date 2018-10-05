@@ -1,0 +1,16 @@
+dependencies:
+
+- name: mongodb
+  version: 1.0.1
+  repository: https://stakater.github.io/stakater-charts
+  alias: mongodb
+
+- name: rabbitmq
+  version: 1.0.1
+  repository: https://stakater.github.io/stakater-charts
+  alias: rabbitmq
+
+- name: hazelcast
+  version: 1.0.1
+  repository: https://stakater.github.io/stakater-charts
+  alias: hazelcast  
