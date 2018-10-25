@@ -1,0 +1,43 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: react-sockjs-keycloak
+  labels:     
+    provider: stakater
+    version: "1.0.0"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:    
+        app: react-sockjs-keycloak   
+    spec:
+      containers:
+      - name: react-sockjs-keycloak
+        image: "stakater/react-sockjs-keycloak:node-9.6.1-v0.0.1"
+        ports:
+        - containerPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    expose: "true"
+  annotations:
+    xposer.stakater.com/annotations: |-
+       kubernetes.io/ingress.class: external-ingress
+       ingress.kubernetes.io/force-ssl-redirect: false
+       certmanager.k8s.io/cluster-issuer: letsencrypt-production
+    config.xposer.stakater.com/IngressURLTemplate: "{{ `react-sockjs-keycloak.lab.{{.Domain}}` }}"
+    config.xposer.stakater.com/Domain: stackator.com
+    config.xposer.stakater.com/TLS: "true"
+    config.xposer.stakater.com/IngressNameTemplate: "{{ `{{.Service}}-{{.Namespace}}` }}"
+  name: react-sockjs-keycloak  
+spec:
+  selector:
+    app: react-sockjs-keycloak
+  ports:
+  - name: web
+    port: 8080
+    protocol: TCP
+    targetPort: 8080

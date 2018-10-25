@@ -1,0 +1,140 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: spring-web-socket-keycloak
+  labels:     
+    provider: stakater
+    version: "1.0.0"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: spring-web-socket-keycloak
+    spec:
+      containers:
+      - name: spring-web-socket-keycloak
+        image: "stakater/spring-web-socket-keycloak:maven-centos3.5.4-jdk1.8-centos7-SNAPSHOT-feature-websocket-2"
+        ports:
+        - containerPort: 8080
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    xposer.stakater.com/annotations: |-
+       kubernetes.io/ingress.class: external-ingress
+       ingress.kubernetes.io/force-ssl-redirect: false
+       certmanager.k8s.io/cluster-issuer: letsencrypt-production
+    config.xposer.stakater.com/IngressURLTemplate: "{{ `socketapp.lab.{{.Domain}}` }}"
+    config.xposer.stakater.com/Domain: stackator.com
+    config.xposer.stakater.com/TLS: "true"
+    config.xposer.stakater.com/IngressNameTemplate: "{{ `akah-{{.Service}}-{{.Namespace}}` }}"
+  labels:
+    k8sapp: stakater-monitoring
+    customLabel: present
+    expose: 'true'
+  name: socketapp
+spec:
+  selector:
+    app: spring-web-socket-keycloak
+  ports:
+  - name: web
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# apiVersion: extensions/v1beta1
+# kind: Ingress
+# metadata:
+#   annotations:
+#     ingress.kubernetes.io/rewrite-target: /
+#     kubernetes.io/ingress.class: nginx
+#   name: socketapp
+# spec:
+#   rules:
+#   - host: socketapp.lab.stackator.com
+#     http:
+#       paths:
+#       - backend:
+#           serviceName: socketapp
+#           servicePort: 8080
+
+# ---
+# kind: Service
+# apiVersion: v1
+# metadata:
+#   name: nginx-ssl-proxy
+#   labels:
+#     name: nginx
+#     role: ssl-proxy
+# spec:
+#   ports:
+#   - name: https
+#     port: 443
+#     targetPort: ssl-proxy-https
+#     protocol: TCP
+#   - name: http
+#     port: 80
+#     targetPort: ssl-proxy-http
+#     protocol: TCP
+#   selector:
+#     name: nginx
+#     role: ssl-proxy
+#   type: LoadBalancer
+# ---
+
+# kind: Deployment
+# apiVersion: apps/v1beta1
+# metadata:
+#   name: nginx-ssl-proxy
+# spec:
+#   replicas: 1
+#   template:
+#     metadata:
+#       labels:
+#         name: nginx
+#         role: ssl-proxy
+#     spec:
+#       containers:
+#       - name: nginx-ssl-proxy
+#         image: stakater/nginx-ssl-proxy
+#         env:        
+#         - name: ENABLE_SSL
+#           value: 'false'
+#         # - name: ENABLE_BASIC_AUTH
+#         #   value: 'true'
+#         - name: TARGET_SERVICE
+#           value: 'spring-web-socket-keycloak:8080'
+
+#         ports:
+#         - name: ssl-proxy-http
+#           containerPort: 80
+#         - name: ssl-proxy-https
+#           containerPort: 443
+#       #   volumeMounts:
+#       #   - name: secrets
+#       #     mountPath: /etc/secrets
+#       #     readOnly: true
+#       # volumes:
+#       # - name: secrets
+#       #   secret:
+#       #     secretName: ssl-proxy-secret
