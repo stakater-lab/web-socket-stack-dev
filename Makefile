@@ -16,7 +16,7 @@ clean:
 	rm -rf $(CHART_NAME)/tmpcharts
 	rm -rf $(CHART_NAME)/requirements.lock
 
-build: clean
+build: clean setup
 	helm dependency build $(CHART_NAME)
 	$(MAKE) lint-chart
 
