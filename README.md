@@ -11,3 +11,7 @@ First install helm (locally) & tiller on the server. Use following guide to setu
 ## Deployment
 
 Run `make install CHART_NAME=web-socket-stack`
+
+## Delete
+
+Run `make delete CHART_NAME=web-socket-stack`
