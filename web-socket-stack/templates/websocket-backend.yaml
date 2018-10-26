@@ -1,0 +1,82 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: ws-be
+  labels:     
+    provider: stakater
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: ws-be
+    spec:
+      containers:
+      - name: ws-be
+        image: "stakater/spring-web-socket-keycloak:maven-centos3.5.4-jdk1.8-centos7-v0.0.2"
+        ports:
+        - containerPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    xposer.stakater.com/annotations: |-
+       kubernetes.io/ingress.class: external-ingress
+       ingress.kubernetes.io/force-ssl-redirect: false
+       certmanager.k8s.io/cluster-issuer: letsencrypt-production
+    config.xposer.stakater.com/IngressURLTemplate: "{{ `socketapp.lab.{{.Domain}}` }}"
+    config.xposer.stakater.com/Domain: stackator.com
+    config.xposer.stakater.com/TLS: "true"
+    config.xposer.stakater.com/IngressNameTemplate: "{{ `akah-{{.Service}}-{{.Namespace}}` }}"
+  labels:
+    expose: 'true'
+  name: ws-be
+spec:
+  type: NodePort
+  sessionAffinity: ClientIP
+  selector:
+    app: ws-be
+  ports:
+  - name: web
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: "ws-be"
+  annotations:
+    kubernetes.io/ingress.class: alb
+    # https://github.com/kubernetes-sigs/aws-alb-ingress-controller/blob/master/docs/ingress-resources.md
+    # Defines if the EC2 instance ID or the pod IP are used in the managed Target Groups. Defaults to instance. Valid
+    # options are instance and ip. With instance the Target Group targets are <ec2 instance id>:<node port>, for ip the
+    # targets are <pod ip>:<pod port>. ip is to be used when the pod network is routable and can be reached by the ALB.
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:847616476486:certificate/67eb95b4-2da6-465f-afd2-34bf572bb716
+    # https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html#target-group-attributes
+    # e.g. alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true, stickiness.lb_cookie.duration_seconds=86400
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true
+    # https://github.com/kubernetes-sigs/aws-alb-ingress-controller/issues/487#issuecomment-428262702
+    ##alb.ingress.kubernetes.io/actions.redirect: '{"Type": "redirect", "RedirectConfig":{ "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    ##alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS": 443}]'
+  labels:
+    app: ws-be
+spec:
+  rules:
+#    - http:
+#        paths:
+#        - backend:
+#            serviceName: redirect
+#            servicePort: use-annotation
+#          path: /*
+    # TODO: this is hardcoded, and needs to be either generated using Xposer or fix it manually
+    - host: ws-be.stakater-demo.lab187.k8syard.com
+      http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: "ws-be"
+              servicePort: 8080
