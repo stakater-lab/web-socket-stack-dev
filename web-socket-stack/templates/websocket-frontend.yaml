@@ -1,0 +1,70 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: ws-fe
+  labels:     
+    provider: stakater
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:    
+        app: ws-fe
+    spec:
+      containers:
+      - name: ws-fe
+        image: "stakater/react-sockjs-keycloak:node-9.6.1-SNAPSHOT-PR-2-2"
+        ports:
+        - containerPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    expose: "true"
+  annotations:
+    xposer.stakater.com/annotations: |-
+       kubernetes.io/ingress.class: external-ingress
+       ingress.kubernetes.io/force-ssl-redirect: false
+       certmanager.k8s.io/cluster-issuer: letsencrypt-production
+    config.xposer.stakater.com/IngressURLTemplate: "{{ `react-sockjs-keycloak.lab.{{.Domain}}` }}"
+    config.xposer.stakater.com/Domain: stackator.com
+    config.xposer.stakater.com/TLS: "true"
+    config.xposer.stakater.com/IngressNameTemplate: "{{ `{{.Service}}-{{.Namespace}}` }}"
+  name: ws-fe
+spec:
+  type: NodePort
+  sessionAffinity: ClientIP
+  selector:
+    app: ws-fe
+  ports:
+  - name: web
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: "ws-fe"
+  annotations:
+    # this exposes the app on AWS ALB; the new application load balancer
+    kubernetes.io/ingress.class: alb
+    # https://github.com/kubernetes-sigs/aws-alb-ingress-controller/blob/master/docs/ingress-resources.md
+    # Defines if the EC2 instance ID or the pod IP are used in the managed Target Groups. Defaults to instance. Valid
+    # options are instance and ip. With instance the Target Group targets are <ec2 instance id>:<node port>, for ip the
+    # targets are <pod ip>:<pod port>. ip is to be used when the pod network is routable and can be reached by the ALB.
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:847616476486:certificate/67eb95b4-2da6-465f-afd2-34bf572bb716
+  labels:
+    app: ws-fe
+spec:
+  rules:
+    - host: ws-fe.stakater-demo.lab187.k8syard.com
+      http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: "ws-fe"
+              servicePort: 8080
